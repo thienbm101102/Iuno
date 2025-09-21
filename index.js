@@ -1,7 +1,18 @@
-import { Client, GatewayIntentBits, Partials, Collection, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, PermissionsBitField } from 'discord.js';
-import dotenv from 'dotenv';
-import fs from 'fs';
-import path from 'path';
+const { 
+  Client, 
+  GatewayIntentBits, 
+  Partials, 
+  Collection, 
+  EmbedBuilder, 
+  ButtonBuilder, 
+  ButtonStyle, 
+  ActionRowBuilder, 
+  PermissionsBitField 
+} = require('discord.js');
+
+const dotenv = require('dotenv');
+const fs = require('fs');
+const path = require('path');
 import { fileURLToPath } from 'url';
 //import dns from 'dns';
 //dns.setServers(['8.8.8.8']); // Google DNS
