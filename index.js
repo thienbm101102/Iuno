@@ -5,6 +5,18 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 //import dns from 'dns';
 //dns.setServers(['8.8.8.8']); // Google DNS
+// Render cần 1 web server để không kill app
+const express = require("express");
+const app = express();
+
+app.get("/", (req, res) => {
+  res.send("OK"); // chỉ trả về chữ "OK" để cron-job.org ping
+  console.log("✅ Ping received from cron-job.org");
+});
+
+app.listen(process.env.PORT || 3000, () => {
+  console.log(`🌐 Web server is running on port ${process.env.PORT || 3000}`);
+});
 
 dotenv.config();
 
