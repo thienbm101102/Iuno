@@ -17,7 +17,6 @@ import { fileURLToPath } from 'url';
 //import dns from 'dns';
 //dns.setServers(['8.8.8.8']); // Google DNS
 // Render cần 1 web server để không kill app
-const express = require("express");
 const app = express();
 
 app.get("/", (req, res) => {
