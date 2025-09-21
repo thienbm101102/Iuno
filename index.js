@@ -212,15 +212,7 @@ connection.subscribe(player);
 player.play(resource);
 
     player.on(AudioPlayerStatus.Idle, () => {
-      if (connection && !connection.destroyed) {
-        connection.destroy();
-        console.log("🔊 Bot đã đọc xong và rời kênh.");
-      }
-    });
-
-    player.on("error", (err) => {
-      console.error(`❌ Lỗi khi phát audio: ${err.message}`);
-      if (connection && !connection.destroyed) connection.destroy();
+      ///connection.destroy();///
     });
   }
 
