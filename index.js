@@ -24,6 +24,8 @@ import {
   getVoiceConnection,
 } from "@discordjs/voice";
 import googleTTS from "google-tts-api";
+import https from "https";
+import { Readable } from "stream";
 
 dotenv.config();
 
@@ -134,6 +136,20 @@ client.once("ready", () => {
   });
 });
 
+function streamFromUrl(url) {
+  return new Promise((resolve, reject) => {
+    https.get(url, (res) => {
+      if (res.statusCode !== 200) {
+        reject(new Error(`HTTP ${res.statusCode}`));
+        return;
+      }
+      // wrap response thành stream có thể đọc
+      const stream = new Readable().wrap(res);
+      resolve(stream);
+    }).on("error", reject);
+  });
+}
+
 // --- VoiceStateUpdate: đọc tên khi join ---
 client.on("voiceStateUpdate", async (oldState, newState) => {
   if (
@@ -188,11 +204,12 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
       return;
     }
 
-    const resource = createAudioResource(url);
-    const player = createAudioPlayer();
+    const audioStream = await streamFromUrl(url);
+const resource = createAudioResource(audioStream);
+const player = createAudioPlayer();
 
-    connection.subscribe(player);
-    player.play(resource);
+connection.subscribe(player);
+player.play(resource);
 
     player.on(AudioPlayerStatus.Idle, () => {
       if (connection && !connection.destroyed) {
