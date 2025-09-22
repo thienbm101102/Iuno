@@ -8,9 +8,6 @@ import {
   Partials,
   Collection,
   EmbedBuilder,
-  ButtonBuilder,
-  ButtonStyle,
-  ActionRowBuilder,
   PermissionsBitField,
 } from "discord.js";
 import { fileURLToPath } from "url";
@@ -121,14 +118,20 @@ client.on("interactionCreate", async (interaction) => {
         .setTimestamp();
 
       const sent = await publicChannel.send({ embeds: [embed] });
-      const emojis = ['<a:AbbyPray:1393909359154696233>', '<a:AbbyShocked:1393909368138895411>', '<a:AbbyAngry:1393908721624551434>', '<a:AbbyExplain:1393909308554739732>', '<a:AbbyWOW:1393909383884439602>'];
+      const emojis = [
+        "<a:AbbyPray:1393909359154696233>",
+        "<a:AbbyShocked:1393909368138895411>",
+        "<a:AbbyAngry:1393908721624551434>",
+        "<a:AbbyExplain:1393909308554739732>",
+        "<a:AbbyWOW:1393909383884439602>",
+      ];
       for (const emoji of emojis) await sent.react(emoji);
     }
   }
 });
 
 // --- Bot ready ---
-client.once("ready", () => {
+client.once("clientReady", () => {
   console.log(`🤖 Bot đã đăng nhập với tên ${client.user.tag}`);
   client.user.setPresence({
     activities: [{ name: "Iuno đến đâyyyy", type: 3 }],
@@ -138,20 +141,22 @@ client.once("ready", () => {
 
 function streamFromUrl(url) {
   return new Promise((resolve, reject) => {
-    https.get(url, (res) => {
-      if (res.statusCode !== 200) {
-        reject(new Error(`HTTP ${res.statusCode}`));
-        return;
-      }
-      // wrap response thành stream có thể đọc
-      const stream = new Readable().wrap(res);
-      resolve(stream);
-    }).on("error", reject);
+    https
+      .get(url, (res) => {
+        if (res.statusCode !== 200) {
+          reject(new Error(`HTTP ${res.statusCode}`));
+          return;
+        }
+        const stream = new Readable().wrap(res);
+        resolve(stream);
+      })
+      .on("error", reject);
   });
 }
 
 // --- VoiceStateUpdate: đọc tên khi join ---
 client.on("voiceStateUpdate", async (oldState, newState) => {
+  // Khi có user mới vào voice
   if (
     !oldState.channelId &&
     newState.channelId &&
@@ -161,28 +166,23 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
     const member = newState.member;
     const channel = newState.channel;
 
-    const name =
-      member.displayName ||
-      member.nickname ||
-      member.user?.username ||
-      "bạn";
     const greetings = [
-`Chuẩn bị tâm lý nhé, ${member.displayName} tới rồi!`,
-`Hey ${member.displayName}, mình chờ bạn nãy giờ đó!`,
-`🛬 Hạ cánh an toàn! ${member.displayName} đã tiến vào ${channel.name}!`,
-`🎯 Đội hình đã đủ – ${member.displayName} là mảnh ghép cuối cùng còn thiếu đó.`,
-`⚔️ Anh em mình cứ thế thôi ${member.displayName} nhỉ, hẹ hẹ hẹ.`,
-`Người chơi hệ chất lượng ${member.displayName} đã nhập hội!`,
-`${member.displayName} vừa respawn! Không biết lần này gánh hay feed nữa đây?`,
-`🎮 ${member.displayName} đã log in. Kẻ thù hãy run sợ dần đi!`,
-`🎤 ${member.displayName} vào rồi! Còn chờ gì mà không on the mic`,
-` Ô kìa ${member.displayName} đã tới rồi`,
-` Mỹ nhân, đừng cản ${member.displayName} tu tiên @@!`,
-` Đang tiến vào ${channel.name} chính là ${member.displayName}, cùng nhiệt liệt chào đón nào`
+      `Chuẩn bị tâm lý nhé, ${member.displayName} tới rồi!`,
+      `Hey ${member.displayName}, mình chờ bạn nãy giờ đó!`,
+      `🛬 Hạ cánh an toàn! ${member.displayName} đã tiến vào ${channel.name}!`,
+      `🎯 Đội hình đã đủ – ${member.displayName} là mảnh ghép cuối cùng còn thiếu đó.`,
+      `⚔️ Anh em mình cứ thế thôi ${member.displayName} nhỉ, hẹ hẹ hẹ.`,
+      `Người chơi hệ chất lượng ${member.displayName} đã nhập hội!`,
+      `${member.displayName} vừa respawn! Không biết lần này gánh hay feed nữa đây?`,
+      `🎮 ${member.displayName} đã log in. Kẻ thù hãy run sợ dần đi!`,
+      `🎤 ${member.displayName} vào rồi! Còn chờ gì mà không on the mic`,
+      `Ô kìa ${member.displayName} đã tới rồi`,
+      `Mỹ nhân, đừng cản ${member.displayName} tu tiên @@!`,
+      `Đang tiến vào ${channel.name} chính là ${member.displayName}, cùng nhiệt liệt chào đón nào`,
     ];
 
     const text = greetings[Math.floor(Math.random() * greetings.length)];
-    console.log(`🟢 ${name} vào voice: ${channel.name} | Bot đọc: ${text}`);
+    console.log(`🟢 ${member.displayName} vào voice: ${channel.name} | Bot đọc: ${text}`);
 
     const url = googleTTS.getAudioUrl(text, {
       lang: "vi",
@@ -205,14 +205,14 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
     }
 
     const audioStream = await streamFromUrl(url);
-const resource = createAudioResource(audioStream);
-const player = createAudioPlayer();
+    const resource = createAudioResource(audioStream);
+    const player = createAudioPlayer();
 
-connection.subscribe(player);
-player.play(resource);
+    connection.subscribe(player);
+    player.play(resource);
 
     player.on(AudioPlayerStatus.Idle, () => {
-      ///connection.destroy();///
+      // Không destroy ở đây, để check voice trống xử lý
     });
   }
 
@@ -223,7 +223,7 @@ player.play(resource);
 
     if (remaining.size === 0) {
       const botConnection = getVoiceConnection(channel.guild.id);
-      if (botConnection) {
+      if (botConnection && botConnection.state.status !== "destroyed") {
         botConnection.destroy();
         console.log("👋 Bot đã rời vì voice trống.");
       }
