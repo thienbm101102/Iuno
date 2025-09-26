@@ -28,10 +28,13 @@ dotenv.config();
 
 // --- Web server giữ cho Render không ngủ ---
 const app = express();
+
 app.get("/", (req, res) => {
-  res.send("OK");
+  res.set("Content-Type", "text/plain"); // ép trả về text thuần
+  res.status(200).send("OK");
   console.log("✅ Ping received");
 });
+
 app.listen(process.env.PORT || 3000, () => {
   console.log(`🌐 Web server running at ${process.env.PORT || 3000}`);
 });
