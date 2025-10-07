@@ -170,18 +170,7 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
     const channel = newState.channel;
 
     const greetings = [
-      `Chuẩn bị tâm lý nhé, ${member.displayName} tới rồi!`,
-      `Hey ${member.displayName}, mình chờ bạn nãy giờ đó!`,
-      `🛬 Hạ cánh an toàn! ${member.displayName} đã tiến vào ${channel.name}!`,
-      `🎯 Đội hình đã đủ – ${member.displayName} là mảnh ghép cuối cùng còn thiếu đó.`,
-      `⚔️ Anh em mình cứ thế thôi ${member.displayName} nhỉ, hẹ hẹ hẹ.`,
-      `Người chơi hệ chất lượng ${member.displayName} đã nhập hội!`,
-      `${member.displayName} vừa respawn! Không biết lần này gánh hay feed nữa đây?`,
-      `🎮 ${member.displayName} đã log in. Kẻ thù hãy run sợ dần đi!`,
-      `🎤 ${member.displayName} vào rồi! Còn chờ gì mà không on the mic`,
-      `Ô kìa ${member.displayName} đã tới rồi`,
-      `Mỹ nhân, đừng cản ${member.displayName} tu tiên @@!`,
-      `Đang tiến vào ${channel.name} chính là ${member.displayName}, cùng nhiệt liệt chào đón nào`,
+      `${member.displayName} đã tham gia ${channel.name}!`
     ];
 
     const text = greetings[Math.floor(Math.random() * greetings.length)];
