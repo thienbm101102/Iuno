@@ -169,11 +169,8 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
     const member = newState.member;
     const channel = newState.channel;
 
-    const greetings = [
-      `${member.displayName} đã tham gia ${channel.name}!`
-    ];
+    const text = `${member.displayName} đã tham gia ${channel.name}!`;
 
-    const text = greetings[Math.floor(Math.random() * greetings.length)];
     console.log(`🟢 ${member.displayName} vào voice: ${channel.name} | Bot đọc: ${text}`);
 
     const url = googleTTS.getAudioUrl(text, {
