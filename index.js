@@ -16,30 +16,24 @@ import {
   createAudioPlayer,
   createAudioResource,
   entersState,
-  AudioPlayerStatus,
   VoiceConnectionStatus,
   getVoiceConnection,
 } from "@discordjs/voice";
 import googleTTS from "google-tts-api";
-import https from "https";
-import { Readable } from "stream";
 
 dotenv.config();
 
-// --- Web server giữ cho Render không ngủ ---
 const app = express();
 
 app.get("/", (req, res) => {
-  res.set("Content-Type", "text/plain"); // ép trả về text thuần
+  res.set("Content-Type", "text/plain"); 
   res.status(200).send("OK");
-  console.log("✅ Ping received");
 });
 
-app.listen(process.env.PORT || 3000, () => {
-  console.log(`🌐 Web server running at ${process.env.PORT || 3000}`);
+app.listen(process.env.PORT || 10000, () => {
+  console.log(`🌐 Web server Iuno running at ${process.env.PORT || 10000}`);
 });
 
-// --- Setup Discord client ---
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -67,37 +61,28 @@ if (fs.existsSync(commandsPath)) {
   }
 }
 
-// --- Interaction handler ---
 client.on("interactionCreate", async (interaction) => {
   if (interaction.isChatInputCommand()) {
     const command = client.commands.get(interaction.commandName);
     if (command) await command.execute(interaction, client);
   } else if (interaction.isButton()) {
     const [action, messageId] = interaction.customId.split("_");
-    const config = JSON.parse(fs.readFileSync("./config.json", "utf8"));
+    const configPath = path.join(__dirname, "config.json");
+    
+    if (!fs.existsSync(configPath)) return interaction.reply({ content: "❌ Thiếu file config.json", ephemeral: true });
+    const config = JSON.parse(fs.readFileSync(configPath, "utf8"));
 
-    if (
-      !interaction.memberPermissions.has(
-        PermissionsBitField.Flags.ManageMessages
-      )
-    ) {
-      return await interaction.reply({
-        content: "❌ Bạn không có quyền duyệt.",
-        ephemeral: true,
-      });
+    if (!interaction.memberPermissions.has(PermissionsBitField.Flags.ManageMessages)) {
+      return await interaction.reply({ content: "❌ Bạn không có quyền duyệt.", ephemeral: true });
     }
 
     await interaction.deferUpdate();
 
-    const targetMsg = await interaction.channel.messages
-      .fetch(messageId)
-      .catch(() => null);
+    const targetMsg = await interaction.channel.messages.fetch(messageId).catch(() => null);
     if (!targetMsg) return;
 
-    const originalContent =
-      targetMsg.embeds[0]?.description || "Không rõ nội dung";
+    const originalContent = targetMsg.embeds[0]?.description || "Không rõ nội dung";
 
-    // disable nút sau khi bấm
     const disabledRow = {
       type: 1,
       components: targetMsg.components[0].components.map((btn) => ({
@@ -108,9 +93,7 @@ client.on("interactionCreate", async (interaction) => {
     await targetMsg.edit({ components: [disabledRow] });
 
     if (action === "accept") {
-      const publicChannel = await client.channels
-        .fetch(config.publicChannel)
-        .catch(() => null);
+      const publicChannel = await client.channels.fetch(config.publicChannel).catch(() => null);
       if (!publicChannel) return;
 
       const embed = new EmbedBuilder()
@@ -133,76 +116,65 @@ client.on("interactionCreate", async (interaction) => {
   }
 });
 
-// --- Bot ready ---
 client.once("clientReady", () => {
   console.log(`🤖 Bot đã đăng nhập với tên ${client.user.tag}`);
   client.user.setPresence({
     activities: [{ name: "Iuno đến đâyyyy", type: 3 }],
-    status: "idle",
+    status: "online",
   });
 });
 
-function streamFromUrl(url) {
-  return new Promise((resolve, reject) => {
-    https
-      .get(url, (res) => {
-        if (res.statusCode !== 200) {
-          reject(new Error(`HTTP ${res.statusCode}`));
-          return;
-        }
-        const stream = new Readable().wrap(res);
-        resolve(stream);
-      })
-      .on("error", reject);
-  });
-}
-
-// --- VoiceStateUpdate: đọc tên khi join ---
+// --- SỬ DỤNG CƠ CHẾ BASE64 CHO RENDER ---
 client.on("voiceStateUpdate", async (oldState, newState) => {
-  // Khi có user mới vào voice
-  if (
-    !oldState.channelId &&
-    newState.channelId &&
-    newState.member &&
-    !newState.member.user.bot
-  ) {
+  if (!oldState.channelId && newState.channelId && newState.member && !newState.member.user.bot) {
     const member = newState.member;
     const channel = newState.channel;
 
     const text = `Chào mừng ${member.displayName} đã tham gia ${channel.name}!`;
-
     console.log(`🟢 ${member.displayName} vào voice: ${channel.name} | Bot đọc: ${text}`);
-
-    const url = googleTTS.getAudioUrl(text, {
-      lang: "vi",
-      slow: false,
-      host: "https://translate.google.com",
-    });
 
     const connection = joinVoiceChannel({
       channelId: channel.id,
       guildId: channel.guild.id,
       adapterCreator: channel.guild.voiceAdapterCreator,
-      selfDeaf: false,
+      selfDeaf: true, // Tiết kiệm băng thông cho Render
     });
 
     try {
-      await entersState(connection, VoiceConnectionStatus.Ready, 5_000);
+      await entersState(connection, VoiceConnectionStatus.Ready, 15_000);
     } catch {
-      if (connection && !connection.destroyed) connection.destroy();
-      return;
+      console.error("⚠️ Timeout kết nối Voice. Vẫn ép phát...");
     }
 
-    const audioStream = await streamFromUrl(url);
-    const resource = createAudioResource(audioStream);
-    const player = createAudioPlayer();
+    try {
+      // 1. Tải Base64 thay vì xin URL
+      const base64Audio = await googleTTS.getAudioBase64(text, {
+        lang: "vi",
+        slow: false,
+        host: "https://translate.google.com",
+      });
 
-    connection.subscribe(player);
-    player.play(resource);
+      // 2. Ghi ra file vật lý để FFmpeg trên Render đọc mượt
+      const tempFileName = `join-${Date.now()}.mp3`;
+      const tempFilePath = path.join(__dirname, tempFileName);
+      fs.writeFileSync(tempFilePath, Buffer.from(base64Audio, "base64"));
 
-    player.on(AudioPlayerStatus.Idle, () => {
-      // Không destroy ở đây, để check voice trống xử lý
-    });
+      const resource = createAudioResource(tempFilePath);
+      const player = createAudioPlayer();
+
+      connection.subscribe(player);
+      player.play(resource);
+
+      // 3. Tự động xóa file sau khi phát xong (20s)
+      setTimeout(() => {
+        try {
+          if (fs.existsSync(tempFilePath)) fs.unlinkSync(tempFilePath);
+        } catch (err) {}
+      }, 20000);
+
+    } catch (err) {
+      console.error("❌ Lỗi tải âm thanh Base64:", err.message);
+    }
   }
 
   // Nếu voice trống → bot rời
@@ -213,8 +185,10 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
     if (remaining.size === 0) {
       const botConnection = getVoiceConnection(channel.guild.id);
       if (botConnection && botConnection.state.status !== "destroyed") {
-        botConnection.destroy();
-        console.log("👋 Bot đã rời vì voice trống.");
+        try {
+          botConnection.destroy();
+          console.log("👋 Bot đã rời vì voice trống.");
+        } catch (e) {}
       }
     }
   }
