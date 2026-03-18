@@ -116,7 +116,8 @@ client.on("interactionCreate", async (interaction) => {
   }
 });
 
-client.once("clientReady", () => {
+// ĐÃ SỬA: Đổi "clientReady" thành "ready" để bot có thể Online sáng đèn
+client.once("ready", () => {
   console.log(`🤖 Bot đã đăng nhập với tên ${client.user.tag}`);
   client.user.setPresence({
     activities: [{ name: "Iuno đến đâyyyy", type: 3 }],
@@ -124,7 +125,6 @@ client.once("clientReady", () => {
   });
 });
 
-// --- SỬ DỤNG CƠ CHẾ BASE64 CHO RENDER ---
 client.on("voiceStateUpdate", async (oldState, newState) => {
   if (!oldState.channelId && newState.channelId && newState.member && !newState.member.user.bot) {
     const member = newState.member;
@@ -137,7 +137,7 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
       channelId: channel.id,
       guildId: channel.guild.id,
       adapterCreator: channel.guild.voiceAdapterCreator,
-      selfDeaf: true, // Tiết kiệm băng thông cho Render
+      selfDeaf: true, 
     });
 
     try {
@@ -147,14 +147,12 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
     }
 
     try {
-      // 1. Tải Base64 thay vì xin URL
       const base64Audio = await googleTTS.getAudioBase64(text, {
         lang: "vi",
         slow: false,
         host: "https://translate.google.com",
       });
 
-      // 2. Ghi ra file vật lý để FFmpeg trên Render đọc mượt
       const tempFileName = `join-${Date.now()}.mp3`;
       const tempFilePath = path.join(__dirname, tempFileName);
       fs.writeFileSync(tempFilePath, Buffer.from(base64Audio, "base64"));
@@ -165,7 +163,6 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
       connection.subscribe(player);
       player.play(resource);
 
-      // 3. Tự động xóa file sau khi phát xong (20s)
       setTimeout(() => {
         try {
           if (fs.existsSync(tempFilePath)) fs.unlinkSync(tempFilePath);
@@ -177,7 +174,6 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
     }
   }
 
-  // Nếu voice trống → bot rời
   if (oldState.channelId && !newState.channelId && oldState.channel) {
     const channel = oldState.channel;
     const remaining = channel.members.filter((m) => !m.user.bot);
