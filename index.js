@@ -27,7 +27,7 @@ const app = express();
 
 app.get("/", (req, res) => {
   res.set("Content-Type", "text/plain"); 
-  res.status(200).send("OK");
+  res.status(200).send("OK - Bot Iuno dang hoat dong");
 });
 
 app.listen(process.env.PORT || 10000, () => {
@@ -48,19 +48,25 @@ const client = new Client({
   partials: [Partials.Channel],
 });
 
+// An toàn khi nạp lệnh: Bỏ qua lỗi nếu thư mục commands không tồn tại
 client.commands = new Collection();
 const commandsPath = path.join(__dirname, "commands");
 if (fs.existsSync(commandsPath)) {
-  const commandFiles = fs
-    .readdirSync(commandsPath)
-    .filter((file) => file.endsWith(".js"));
+  try {
+    const commandFiles = fs
+      .readdirSync(commandsPath)
+      .filter((file) => file.endsWith(".js"));
 
-  for (const file of commandFiles) {
-    const command = await import(`./commands/${file}`);
-    client.commands.set(command.default.data.name, command.default);
+    for (const file of commandFiles) {
+      const command = await import(`./commands/${file}`);
+      client.commands.set(command.default.data.name, command.default);
+    }
+  } catch (error) {
+    console.log("⚠️ Bỏ qua nạp commands vì thư mục trống hoặc có lỗi.");
   }
 }
 
+// Xử lý nút bấm Confession
 client.on("interactionCreate", async (interaction) => {
   if (interaction.isChatInputCommand()) {
     const command = client.commands.get(interaction.commandName);
@@ -116,15 +122,16 @@ client.on("interactionCreate", async (interaction) => {
   }
 });
 
-// ĐÃ SỬA: Đổi "clientReady" thành "ready" để bot có thể Online sáng đèn
+// Sự kiện báo bot đã Online trên Discord
 client.once("ready", () => {
-  console.log(`🤖 Bot đã đăng nhập với tên ${client.user.tag}`);
+  console.log(`🤖 Bot đã đăng nhập thành công với tên ${client.user.tag}`);
   client.user.setPresence({
     activities: [{ name: "Iuno đến đâyyyy", type: 3 }],
     status: "online",
   });
 });
 
+// Xử lý âm thanh (Voice) bằng file cứng Base64
 client.on("voiceStateUpdate", async (oldState, newState) => {
   if (!oldState.channelId && newState.channelId && newState.member && !newState.member.user.bot) {
     const member = newState.member;
@@ -190,4 +197,12 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
   }
 });
 
-client.login(process.env.TOKEN);
+// TRẠM KIỂM SOÁT TOKEN VÀ ĐĂNG NHẬP CUỐI CÙNG
+console.log("🔑 Đang tiến hành đăng nhập vào Discord...");
+if (!process.env.TOKEN) {
+  console.error("❌ LỖI NGHIÊM TRỌNG: BIẾN TOKEN BỊ TRỐNG! Bạn chưa nhập TOKEN trên Render.");
+} else {
+  client.login(process.env.TOKEN).catch(err => {
+    console.error("❌ LỖI ĐĂNG NHẬP DISCORD (Sai Token hoặc kẹt mạng):", err.message);
+  });
+}
